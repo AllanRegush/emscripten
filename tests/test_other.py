@@ -2995,7 +2995,7 @@ Module["preRun"].push(function () {
     self.run_process([EMCC, 'code.cpp', '--pre-js', 'pre.js'])
     output = self.run_js('a.out.js')
 
-    assert output.count('This should only appear once.') == 1, output
+    self.assertEqual(output.count('This should only appear once.'), 1)
 
   def test_module_print(self):
     create_test_file('code.cpp', r'''

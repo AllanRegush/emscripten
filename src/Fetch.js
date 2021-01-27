@@ -432,7 +432,9 @@ function fetchXHR(fetch, onsuccess, onerror, onprogress, onreadystatechange) {
 }
 
 function startFetch(fetch, successcb, errorcb, progresscb, readystatechangecb) {
-  if (typeof noExitRuntime !== 'undefined') noExitRuntime = true; // If we are the main Emscripten runtime, we should not be closing down.
+  // Avoid shutting down the runtime since we want to wait for the async
+  // response.
+  _emscripten_runtime_keepalive_push();
 
   var fetch_attr = fetch + {{{ C_STRUCTS.emscripten_fetch_t.__attributes }}};
   var requestMethod = UTF8ToString(fetch_attr);
@@ -454,6 +456,7 @@ function startFetch(fetch, successcb, errorcb, progresscb, readystatechangecb) {
 #if FETCH_DEBUG
     console.log('fetch: operation success. e: ' + e);
 #endif
+    _emscripten_runtime_keepalive_pop();
     if (onsuccess) {{{ makeDynCall('vi', 'onsuccess') }}}(fetch);
     else if (successcb) successcb(fetch);
   };
@@ -467,6 +470,7 @@ function startFetch(fetch, successcb, errorcb, progresscb, readystatechangecb) {
 #if FETCH_DEBUG
     console.error('fetch: operation failed: ' + e);
 #endif
+    _emscripten_runtime_keepalive_pop();
     if (onerror) {{{ makeDynCall('vi', 'onerror') }}}(fetch);
     else if (errorcb) errorcb(fetch);
   };
@@ -495,6 +499,7 @@ function startFetch(fetch, successcb, errorcb, progresscb, readystatechangecb) {
 #if FETCH_DEBUG
       console.log('fetch: IndexedDB store succeeded.');
 #endif
+      _emscripten_runtime_keepalive_pop();
       if (onsuccess) {{{ makeDynCall('vi', 'onsuccess') }}}(fetch);
       else if (successcb) successcb(fetch);
     };
@@ -502,6 +507,7 @@ function startFetch(fetch, successcb, errorcb, progresscb, readystatechangecb) {
 #if FETCH_DEBUG
       console.error('fetch: IndexedDB store failed.');
 #endif
+      _emscripten_runtime_keepalive_pop();
       if (onsuccess) {{{ makeDynCall('vi', 'onsuccess') }}}(fetch);
       else if (successcb) successcb(fetch);
     };

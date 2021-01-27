@@ -3781,6 +3781,80 @@ LibraryManager.library = {
       }
     }
   },
+
+  // Callable in pthread without __proxy needed.
+  emscripten_exit_with_live_runtime__sig: 'v',
+  emscripten_exit_with_live_runtime__deps: ['emscripten_runtime_keepalive_push'],
+  emscripten_exit_with_live_runtime: function() {
+    _emscripten_runtime_keepalive_push();
+    throw 'unwind';
+  },
+
+  emscripten_force_exit__deps: ['$runtimeKeepaliveCounter'],
+  emscripten_force_exit__proxy: 'sync',
+  emscripten_force_exit__sig: 'vi',
+  emscripten_force_exit: function(status) {
+#if EXIT_RUNTIME == 0
+#if ASSERTIONS
+    warnOnce('emscripten_force_exit cannot actually shut down the runtime, as the build does not have EXIT_RUNTIME set');
+#endif
+#endif
+    noExitRuntime = false;
+    runtimeKeepaliveCounter = 0;
+    exit(status);
+  },
+
+  $runtimeKeepaliveCounter: 0,
+
+  $keepRuntimeAlive__deps: ['$runtimeKeepaliveCounter'],
+  $keepRuntimeAlive: function() {
+    return runtimeKeepaliveCounter > 0 || noExitRuntime;
+  },
+
+  // Callable in pthread without __proxy needed.
+  emscripten_runtime_keepalive_push__sig: 'v',
+  emscripten_runtime_keepalive_push__deps: ['$runtimeKeepaliveCounter'],
+  emscripten_runtime_keepalive_push: function() {
+    runtimeKeepaliveCounter += 1;
+  },
+
+  emscripten_runtime_keepalive_pop__sig: 'v',
+  emscripten_runtime_keepalive_pop__deps: ['$runtimeKeepaliveCounter'],
+  emscripten_runtime_keepalive_pop: function() {
+#if ASSERTIONS
+    assert(runtimeKeepaliveCounter > 0);
+#endif
+    runtimeKeepaliveCounter -= 1;
+  },
+
+  $callUserCallback: function(func) {
+    if (ABORT) {
+#if ASSERTIONS
+      err('user callback triggered after application aborted.  Ignoring.');
+      return;
+#endif
+    }
+    try {
+      func();
+    } catch (e) {
+      if (e instanceof ExitStatus) {
+        return;
+      } else if (e !== 'unwind') {
+        // And actual unexpected user-exectpion occured
+        if (e && typeof e === 'object' && e.stack) err('exception thrown: ' + [e, e.stack]);
+        throw e;
+      }
+    }
+#if RUNTIME_DEBUG
+    err('user callback done runtimeKeepaliveCounter=' + runtimeKeepaliveCounter);
+#endif
+    if (!keepRuntimeAlive()) {
+#if RUNTIME_DEBUG
+      err('user callback returns with keepRuntimeAlive=false; exiting');
+#endif
+      _exit(EXITSTATUS);
+    }
+  },
 };
 
 function autoAddDeps(object, name) {

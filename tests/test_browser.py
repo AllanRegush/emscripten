@@ -2536,10 +2536,11 @@ Module["preRun"].push(function () {
   def test_html5_webgl_create_context(self):
     for opts in [[], ['-O2', '-g1', '--closure', '1'], ['-s', 'FULL_ES2=1'], ['-s', 'USE_PTHREADS']]:
       print(opts)
-      self.btest(path_from_root('tests', 'webgl_create_context.cpp'), args=opts + ['-lGL'], expected='0')
+      self.btest_exit(path_from_root('tests', 'webgl_create_context.cpp'), args=opts + ['-lGL'], expected='0')
 
   @requires_graphics_hardware
-  # Verify bug https://github.com/emscripten-core/emscripten/issues/4556: creating a WebGL context to Module.canvas without an ID explicitly assigned to it.
+  # Verify bug https://github.com/emscripten-core/emscripten/issues/4556:
+  # creating a WebGL context to Module.canvas without an ID explicitly assigned to it.
   def test_html5_webgl_create_context2(self):
     self.btest(path_from_root('tests', 'webgl_create_context2.cpp'), expected='0')
 
